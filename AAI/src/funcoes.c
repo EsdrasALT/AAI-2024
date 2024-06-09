@@ -102,14 +102,24 @@ void menuRelatorios(){
 }
 
 void inserirCliente(){
-	Clientes clientes;
-	receberNomePreenchido(&clientes);
-	DataNascimento solicitarDataDeNascimento();
-	verificarTipoContrato();
+	Clientes cliente;
+	DataNascimento dataNascimento;
+	int numeroSequencial = 1;
+
+	receberNomePreenchido(&cliente);
+	solicitarDataDeNascimento(&dataNascimento);
+    gerarCodigoSequencial(&cliente, &dataNascimento, &numeroSequencial);
+    verificarTipoContrato(&cliente);
+    quantidadePlacas(&cliente);
 }
 
 void inserirPlaca(){
+	Carros carro;
+	Clientes cliente;
+	int numeroSequencial = 1;
+
 	chamarFuncoesPlacas();
+	//gerarCodigoSequencialCarro(&carro,&cliente,&numeroSequencial);
 }
 
 void inserirFimUltimo(Carros **ultimoLista){
@@ -145,60 +155,64 @@ void impressao(Carros *lista){
 	}
 }
 
+void receberNomePreenchido(Clientes *cliente) { //chamada da função: receberNomePreenchido(&cliente);
 
-void receberNomePreenchido(Clientes *cliente) {
-    printf("Digite o nome do cliente: ");
+	printf("Digite o nome do cliente: ");
     fgets(cliente->nome, sizeof(cliente->nome), stdin);
+    cliente->nome[strcspn(cliente->nome, "\n")] = '\0'; // Remover o caractere de enter (nova linha lido pelo fgets)
 
-    if (cliente->nome[strlen(cliente->nome) - 1] == '\n') {
-        cliente->nome[strlen(cliente->nome) - 1] = '\0';
-    }
-
-    printf("Nome formatado: %s\n", cliente->nome);
-    formatarNomeRecursiva(cliente->nome);
-
-    printf("Nome formatado: %s\n", cliente->nome);
+    formatarNomeRecursiva(cliente->nome,0,1);
+	printf("Nome formatado: %s\n", cliente->nome);
 }
 
-//TODO IMPLEMENTAR PRIMERAS MAISCULAS O RESTO MINUSCULAS
-void formatarNomeRecursiva(char *nome) {
-
-    printf("Nome formatado: %s\n", nome);
-	if (*nome == '\0') {
-        return;
-    }
-
-    if (*nome == ' ') {
-    	formatarNomeRecursiva(nome + 1);
-    }
-    else if (isalpha(*nome)) {
-        *nome = toupper(*nome);
-        formatarNomeRecursiva(nome + 1);
-    }
-}
-
-//TODO CRIAR FUNCAO PARA CODIGO
-
-DataNascimento solicitarDataDeNascimento() {
-	char data_str[11];
-	DataNascimento data;
-
-	int formato_incorreto = 1;
-	while (formato_incorreto) {
-		printf("Digite sua data de nascimento no formato MM/DD/AAAA: ");
-		scanf("%10s", data_str);
-
-		data = converterData(data_str);
-
-		if (data.dia >= 1 && data.dia <= 31 && data.mes >= 1 && data.mes <= 12 && data.ano >= 1900 && data.ano <= 2024) {
-			formato_incorreto = 0; // Saida do loop
-		} else {
-			printf("Formato incorreto. Por favor, insira a data no formato correto.\n");
-		}
+void formatarNomeRecursiva(char *nome, int indice, int caractereDeveSerPego) {
+	if (nome[indice] == '\0') {
+		return; // Caso base: fim da string
 	}
 
-    printf("Data de nascimento válida: %02d/%02d/%d\n", data.mes, data.dia, data.ano);
-	return data;
+	// Converter para maiúscula se for a primeira letra de uma palavra
+	if (caractereDeveSerPego && isalpha(nome[indice])) { //A função isalpha é uma função da biblioteca <ctype.h> que verifica
+		nome[indice] = toupper(nome[indice]);         //se o caractere fornecido é uma letra alfabética (a-z ou A-Z)
+	} else {
+		nome[indice] = tolower(nome[indice]);
+	}
+
+	// Verificar se o próximo caractere deve ser capitalizado
+	if (nome[indice] == ' ') {
+		caractereDeveSerPego = 1; //SIM
+	} else {
+		caractereDeveSerPego = 0; //NÃO
+	}
+
+	// Chamada recursiva para o próximo caractere
+	formatarNomeRecursiva(nome, indice + 1, caractereDeveSerPego);
+}
+
+void solicitarDataDeNascimento(DataNascimento *dataNascimento){
+	char data_str[11];
+
+	int solicitarNovamente = 1;
+	while (solicitarNovamente) {
+		printf("Digite sua data de nascimento no formato DD/MM/AAAA: ");
+		fgets(data_str, sizeof(data_str), stdin);
+		data_str[strcspn(data_str, "\n")]  = '\0';
+
+		*dataNascimento = converterData(data_str);
+
+		if (isDataValida(dataNascimento->dia, dataNascimento->mes, dataNascimento->ano)) {
+			int idade = verificarIdade(dataNascimento->ano);
+			if (idade < 18 || idade > 100) {
+				printf("Idade menor que 18 ou maior que 100\n");
+				solicitarNovamente = 1; // Solicitar novamente
+			} else {
+				printf("Idade apta\n");
+				solicitarNovamente = 0; // Saída do loop
+			}
+		} else {
+			printf("Formato de data incorreto.\n");
+		}
+	}
+	printf("Data de nascimento válida: %02d/%02d/%d\n", dataNascimento->dia, dataNascimento->mes, dataNascimento->ano);
 }
 
 DataNascimento converterData(char *data_string) {
@@ -208,55 +222,70 @@ DataNascimento converterData(char *data_string) {
     return data;
 }
 
-//TODO IMPLEMENTAR VERIFICAÇÃO DE IDADE
-int verificarIdade(DataNascimento data_nascimento) {
-    // Obter a data atual
-    DataNascimento data_atual;
-    // Suponha que a data atual seja 30/12/2024 para fins de exemplo
-    data_atual.dia = 30;
-    data_atual.mes = 12;
-    data_atual.ano = 2024;
-
-    // Calcular a idade
-    int idade = data_atual.ano - data_nascimento.ano;
-    if (data_atual.mes < data_nascimento.mes || (data_atual.mes == data_nascimento.mes && data_atual.dia < data_nascimento.dia)) {
-        idade--; // Ainda não fez aniversário neste ano
-    }
+int verificarIdade(int ano) {
+    int idade = 2024 - ano;
     return idade;
 }
 
-void verificarTipoContrato(){
+int isAnoBissexto(int ano) {
+    return (ano % 4 == 0 && ano % 100 != 0) || (ano % 400 == 0);
+}
 
-	Clientes clientes;
-	char tipoContrato='Z';
+int isDataValida(int dia, int mes, int ano) {
+    if (mes < 1 || mes > 12) return 0;
+
+    int diasNoMes[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+
+    if (mes == 2 && isAnoBissexto(ano)) {
+        diasNoMes[1] = 29;
+    }
+
+    return dia >= 1 && dia <= diasNoMes[mes - 1];
+}
+
+void gerarCodigoSequencial(Clientes *cliente, DataNascimento *dataNascimento, int *numeroSequencial) {
+    printf("Primeira letra do nome: %c\n", cliente->nome[0]);
+    printf("Ano de nascimento: %d\n", dataNascimento->ano);
+    printf("Número sequencial: %02d\n", *numeroSequencial);
+
+    char codigo[7];
+    sprintf(codigo, "%c%d%02d", toupper(cliente->nome[0]), dataNascimento->ano, *numeroSequencial);
+    printf("Código sequencial gerado: %s\n", codigo);
+
+    (*numeroSequencial)++;
+}
+
+void verificarTipoContrato(Clientes *cliente){
+
+	char tipoContrato;
 	int contratoInvalido = 1;
-	while(contratoInvalido){
 
+	while(contratoInvalido){
 		printf("Digite o tipo de contrato ( D - Diária | P - Parcial | M - Mensal): \n");
 		scanf(" %c", &tipoContrato);
-
 		if (tipoContrato == 'D' || tipoContrato == 'P' || tipoContrato == 'M') {
 			printf("Tipo de contrato válido.\n");
-			clientes.tipoContrato = tipoContrato;
+			cliente->tipoContrato = tipoContrato;
 			contratoInvalido = 0;
 		} else {
 			printf("Tipo de contrato inválido.\n");
 		}
 	}
+    printf("Tipo de contrato selecionado: %c\n", cliente->tipoContrato);
 }
 
-void quantidadePlacas() {
-	Clientes clientes;
+void quantidadePlacas(Clientes *cliente){
+
 	do {
 		printf("Digite a quantidade de placas: ");
-		scanf("%d", &clientes.quantidadePlacas);
-		if (clientes.quantidadePlacas < 1) {
+		scanf("%d", &cliente->quantidadePlacas);
+		if (cliente->quantidadePlacas < 1) {
 			printf("\nErro, você deve ter pelo menos 1 placa cadastrada\n");
-		} else if (clientes.quantidadePlacas > MAX_CARROS) {
+		} else if (cliente->quantidadePlacas > MAX_CARROS) {
 			printf("\nErro, 5 é o numero maximo de placas para cadastro\n");
 		}
-	} while (clientes.quantidadePlacas < 1 || clientes.quantidadePlacas > MAX_CARROS);
-	printf("%d", clientes.quantidadePlacas);
+	} while (cliente->quantidadePlacas < 1 || cliente->quantidadePlacas > MAX_CARROS);
+	printf("%d", cliente->quantidadePlacas);
 }
 
 void chamarFuncoesPlacas(){
@@ -377,3 +406,19 @@ void validarPlacaNova() {
 
     } while (placaInvalida);
 }
+
+void gerarCodigoSequencialCarro(Carros *carro,Clientes *cliente, int *numeroSequencial){
+	printf("Primeira letra do nome: %s\n", cliente->codigo);
+	printf("Número sequencial: %02d\n", *numeroSequencial);
+
+	strcpy(carro->codigoSequencial, cliente->codigo);
+
+	char numeroSequencialString[3];
+	sprintf(numeroSequencialString, "%02d", *numeroSequencial);
+	strcat(carro->codigoSequencial, numeroSequencialString);
+
+	printf("Código sequencial gerado para o carro: %s\n", carro->codigoSequencial);
+
+	(*numeroSequencial)++;
+}
+
